@@ -213,6 +213,7 @@ template.innerHTML = `
 `
 
 export default class FaustEditor extends HTMLElement {
+    node: IFaustMonoWebAudioNode
     constructor() {
         super()
     }
@@ -346,8 +347,12 @@ export default class FaustEditor extends HTMLElement {
             openTab(ui.length > 1 || ui[0].items.length > 0 ? 0 : 3)
 
             // Create controls via Faust UI
+            this.node = node
             const faustUI = new FaustUI({ ui, root: faustUIRoot })
-            faustUI.paramChangeByUI = (path, value) => node?.setParamValue(path, value)
+            faustUI.paramChangeByUI = (path, value) => {
+                node?.setParamValue(path, value)
+                console.log(node, path, value)
+            }
             node.setOutputParamHandler((path, value) => faustUI.paramChangeByDSP(path, value))
 
             // Create SVG block diagram
