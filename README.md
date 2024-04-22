@@ -9,6 +9,14 @@ This component is ideal for demonstrating some code in Faust and allowing the re
 
 These components are built on top of [faustwasm](https://github.com/grame-cncm/faustwasm) and [faust-ui](https://github.com/Fr0stbyteR/faust-ui) packages.
 
+# This fork
+This fork is created by @ojack for experimental use. Some changes include:
+- exposing the faust audio node via the 'node' property of the faust editor. parameters of a running program can be set bye calling 
+```javascript
+faustEditor.node?.setParamValue(path, value)
+```
+where faustEditor is an instance of the 'faust-editor' custom element
+
 ## Build Instructions
 
 Clone this repository, then run:
