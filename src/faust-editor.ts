@@ -218,6 +218,18 @@ export default class FaustEditor extends HTMLElement {
         super()
     }
 
+    attributeChangedCallback(name, oldValue, newValue) {
+        console.log(
+          `Attribute ${name} has changed from ${oldValue} to ${newValue}.`,
+        );
+      }
+
+    setCode(_code) {
+        const code = this.innerHTML.replace("<!--", "").replace("-->", "").trim()
+        this.attachShadow({ mode: "open" }).appendChild(template.content.cloneNode(true))
+
+    }
+
     connectedCallback() {
         const code = this.innerHTML.replace("<!--", "").replace("-->", "").trim()
         this.attachShadow({ mode: "open" }).appendChild(template.content.cloneNode(true))
@@ -268,7 +280,7 @@ export default class FaustEditor extends HTMLElement {
         let spectrum: Scope | undefined
         let gmidi = false
         let gnvoices = -1
-        let sourceNode: AudioBufferSourceNode = undefined;
+        let sourceNode: AudioBufferSourceNode | undefined = undefined;
 
         runButton.onclick = async () => {
             if (audioCtx.state === "suspended") {
@@ -282,6 +294,13 @@ export default class FaustEditor extends HTMLElement {
                 // Compile Faust code to access JSON metadata
                 await default_generator.compile(compiler, "main", code, "")
                 const json = default_generator.getMeta()
+                console.log('compiled code', json)
+                let event = new CustomEvent('faust-code-compiled', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: json
+                })
+                this.dispatchEvent(event)
                 let { midi, nvoices } = extractMidiAndNvoices(json);
                 gmidi = midi;
                 gnvoices = nvoices;
