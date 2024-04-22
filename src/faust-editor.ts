@@ -56,7 +56,8 @@ template.innerHTML = `
     }
 
     #controls {
-        background-color: #384d64;
+      /*  background-color: #384d64; */
+        background-color: #ccc;
         border-bottom: 1px solid black;
         display: flex;
     }
@@ -120,13 +121,16 @@ template.innerHTML = `
     }
 
     #sidebar-buttons {
-        background-color: #f5f5f5;
+        /* background-color: #f5f5f5;*/
+        background-color: #ccc;
+
         display: flex;
         flex-direction: column;
     }
 
     #sidebar-buttons .button {
-        background-color: #f5f5f5;
+       /* background-color: #f5f5f5;*/
+       background-color: #ccc;
         color: #000;
         width: 20px;
         height: 20px;
@@ -162,7 +166,8 @@ template.innerHTML = `
     }
 
     .button {
-        background-color: #384d64;
+      /*  background-color: #384d64; */
+      background-color: #ccc;
         border: 0;
         padding: 5px;
         width: 25px;
@@ -171,7 +176,8 @@ template.innerHTML = `
     }
 
     .button:hover {
-        background-color: #4b71a1;
+      /*  background-color: #4b71a1; */
+      background-color: #f36;
     }
 
     .button:active {
@@ -214,6 +220,14 @@ template.innerHTML = `
 
 export default class FaustEditor extends HTMLElement {
     node: IFaustMonoWebAudioNode
+    input: MediaStreamAudioSourceNode | undefined
+    analyser: AnalyserNode | undefined
+    scope: Scope | undefined
+    spectrum: Scope | undefined
+    gmidi = false
+    gnvoices = -1
+    sourceNode: AudioBufferSourceNode | undefined = undefined
+
     constructor() {
         super()
     }
@@ -228,6 +242,117 @@ export default class FaustEditor extends HTMLElement {
         const code = this.innerHTML.replace("<!--", "").replace("-->", "").trim()
         this.attachShadow({ mode: "open" }).appendChild(template.content.cloneNode(true))
 
+    }
+
+    async run() {
+        // let node: IFaustMonoWebAudioNode | undefined
+        // let input: MediaStreamAudioSourceNode | undefined
+        // let analyser: AnalyserNode | undefined
+        // let scope: Scope | undefined
+        // let spectrum: Scope | undefined
+        // let gmidi = false
+        // let gnvoices = -1
+        // let sourceNode: AudioBufferSourceNode | undefined = undefined;
+       const { setSVG, audioInputSelector, stopButton, updateInputDevices, connectInput, openTab, editor, runButton, faustUIRoot, faustDiagram, sidebar, sidebarContent, tabButtons, tabContents, split, openSidebar } = this.localElements
+
+        if (audioCtx.state === "suspended") {
+            await audioCtx.resume()
+        }
+        await faustPromise
+        // Compile Faust code
+        const code = editor.state.doc.toString()
+        let generator = null
+        try {
+            // Compile Faust code to access JSON metadata
+            await default_generator.compile(compiler, "main", code, "")
+            const json = default_generator.getMeta()
+            console.log('compiled code', json)
+            let event = new CustomEvent('faust-code-compiled', {
+                bubbles: true,
+                cancelable: true,
+                detail: json
+            })
+            this.dispatchEvent(event)
+            let { midi, nvoices } = extractMidiAndNvoices(json);
+            this.gmidi = midi;
+            this.gnvoices = nvoices;
+
+            // Build the generator
+            generator = nvoices > 0 ? get_poly_generator() : get_mono_generator();
+            await generator.compile(compiler, "main", code, "-ftz 2");
+
+        } catch (e: any) {
+            setError(editor, e)
+            return
+        }
+        // Clear any old errors
+        clearError(editor)
+
+        // Create an audio node from compiled Faust
+        if (this.node !== undefined) this.node.disconnect()
+        if (this.gnvoices > 0) {
+            this.node = (await (generator as FaustPolyDspGenerator).createNode(audioCtx, gnvoices))!
+        } else {
+            this.node = (await (generator as FaustMonoDspGenerator).createNode(audioCtx))!
+        }
+        if (this.node.numberOfInputs > 0) {
+            audioInputSelector.disabled = false
+            updateInputDevices(await getInputDevices())
+            await connectInput()
+        } else {
+            audioInputSelector.disabled = true
+            audioInputSelector.innerHTML = "<option>Audio input</option>"
+        }
+        this.node.connect(audioCtx.destination)
+        stopButton.disabled = false
+        for (const tabButton of tabButtons) {
+            tabButton.disabled = false
+        }
+
+        // Access MIDI device
+        if (this.gmidi) {
+            accessMIDIDevice(midiInputCallback(this.node))
+                .then(() => {
+                    console.log('Successfully connected to the MIDI device.');
+                })
+                .catch((error) => {
+                    console.error('Error accessing MIDI device:', error.message);
+                });
+        }
+
+        openSidebar()
+        // Clear old tab contents
+        for (const tab of tabContents) {
+            while (tab.lastChild) tab.lastChild.remove()
+        }
+        // Create scope & spectrum plots
+        this.analyser = new AnalyserNode(audioCtx, {
+            fftSize: Math.pow(2, 11), minDecibels: -96, maxDecibels: 0, smoothingTimeConstant: 0.85
+        })
+        this.node.connect(this.analyser)
+        this.scope = new Scope(tabContents[2])
+        this.spectrum = new Scope(tabContents[3])
+
+        // If there are UI elements, open Faust UI (controls tab); otherwise open spectrum analyzer.
+        const ui = this.node.getUI()
+       // openTab(ui.length > 1 || ui[0].items.length > 0 ? 0 : 3)
+        openTab(3)
+        // Create controls via Faust UI
+        // this.node = node
+        const faustUI = new FaustUI({ ui, root: faustUIRoot })
+        faustUI.paramChangeByUI = (path, value) => {
+            this.node?.setParamValue(path, value)
+            // console.log(node, path, value)
+        }
+        this.node.setOutputParamHandler((path, value) => faustUI.paramChangeByDSP(path, value))
+
+        // Create SVG block diagram
+        setSVG(svgDiagrams.from("main", code, "")["process.svg"])
+
+        // Set editor size to fit UI size
+        // editorEl.style.height = `${Math.max(125, faustUI.minHeight)}px`;
+        // faustUIRoot.style.width = faustUI.minWidth * 1.25 + "px"
+        // faustUIRoot.style.height = faustUI.minHeight * 1.25 + "px"
     }
 
     connectedCallback() {
@@ -259,7 +384,7 @@ export default class FaustEditor extends HTMLElement {
             minSize: [0, 20],
             gutterSize: 7,
             snapOffset: 150,
-            onDragEnd: () => { scope?.onResize(); spectrum?.onResize() },
+            onDragEnd: () => { this.scope?.onResize(); this.spectrum?.onResize() },
         })
 
         faustPromise.then(() => runButton.disabled = false)
@@ -273,115 +398,120 @@ export default class FaustEditor extends HTMLElement {
             sidebarOpen = true
         }
 
-        let node: IFaustMonoWebAudioNode | undefined
-        let input: MediaStreamAudioSourceNode | undefined
-        let analyser: AnalyserNode | undefined
-        let scope: Scope | undefined
-        let spectrum: Scope | undefined
-        let gmidi = false
-        let gnvoices = -1
-        let sourceNode: AudioBufferSourceNode | undefined = undefined;
+        // let node: IFaustMonoWebAudioNode | undefined
+        // let input: MediaStreamAudioSourceNode | undefined
+        // let analyser: AnalyserNode | undefined
+        // let scope: Scope | undefined
+        // let spectrum: Scope | undefined
+        // let gmidi = false
+        // let gnvoices = -1
+        // let sourceNode: AudioBufferSourceNode | undefined = undefined;
 
-        runButton.onclick = async () => {
-            if (audioCtx.state === "suspended") {
-                await audioCtx.resume()
-            }
-            await faustPromise
-            // Compile Faust code
-            const code = editor.state.doc.toString()
-            let generator = null
-            try {
-                // Compile Faust code to access JSON metadata
-                await default_generator.compile(compiler, "main", code, "")
-                const json = default_generator.getMeta()
-                console.log('compiled code', json)
-                let event = new CustomEvent('faust-code-compiled', {
-                    bubbles: true,
-                    cancelable: true,
-                    detail: json
-                })
-                this.dispatchEvent(event)
-                let { midi, nvoices } = extractMidiAndNvoices(json);
-                gmidi = midi;
-                gnvoices = nvoices;
+        this.gmidi = false
+        this.gnvoices = -1
 
-                // Build the generator
-                generator = nvoices > 0 ? get_poly_generator() : get_mono_generator();
-                await generator.compile(compiler, "main", code, "-ftz 2");
+        runButton.onclick =  async () => { this.run() }
+        
+      //  async () => {
+            // if (audioCtx.state === "suspended") {
+            //     await audioCtx.resume()
+            // }
+            // await faustPromise
+            // // Compile Faust code
+            // const code = editor.state.doc.toString()
+            // let generator = null
+            // try {
+            //     // Compile Faust code to access JSON metadata
+            //     await default_generator.compile(compiler, "main", code, "")
+            //     const json = default_generator.getMeta()
+            //     console.log('compiled code', json)
+            //     let event = new CustomEvent('faust-code-compiled', {
+            //         bubbles: true,
+            //         cancelable: true,
+            //         detail: json
+            //     })
+            //     this.dispatchEvent(event)
+            //     let { midi, nvoices } = extractMidiAndNvoices(json);
+            //     gmidi = midi;
+            //     gnvoices = nvoices;
 
-            } catch (e: any) {
-                setError(editor, e)
-                return
-            }
-            // Clear any old errors
-            clearError(editor)
+            //     // Build the generator
+            //     generator = nvoices > 0 ? get_poly_generator() : get_mono_generator();
+            //     await generator.compile(compiler, "main", code, "-ftz 2");
 
-            // Create an audio node from compiled Faust
-            if (node !== undefined) node.disconnect()
-            if (gnvoices > 0) {
-                node = (await (generator as FaustPolyDspGenerator).createNode(audioCtx, gnvoices))!
-            } else {
-                node = (await (generator as FaustMonoDspGenerator).createNode(audioCtx))!
-            }
-            if (node.numberOfInputs > 0) {
-                audioInputSelector.disabled = false
-                updateInputDevices(await getInputDevices())
-                await connectInput()
-            } else {
-                audioInputSelector.disabled = true
-                audioInputSelector.innerHTML = "<option>Audio input</option>"
-            }
-            node.connect(audioCtx.destination)
-            stopButton.disabled = false
-            for (const tabButton of tabButtons) {
-                tabButton.disabled = false
-            }
+            // } catch (e: any) {
+            //     setError(editor, e)
+            //     return
+            // }
+            // // Clear any old errors
+            // clearError(editor)
 
-            // Access MIDI device
-            if (gmidi) {
-                accessMIDIDevice(midiInputCallback(node))
-                    .then(() => {
-                        console.log('Successfully connected to the MIDI device.');
-                    })
-                    .catch((error) => {
-                        console.error('Error accessing MIDI device:', error.message);
-                    });
-            }
+            // // Create an audio node from compiled Faust
+            // if (node !== undefined) node.disconnect()
+            // if (gnvoices > 0) {
+            //     node = (await (generator as FaustPolyDspGenerator).createNode(audioCtx, gnvoices))!
+            // } else {
+            //     node = (await (generator as FaustMonoDspGenerator).createNode(audioCtx))!
+            // }
+            // if (node.numberOfInputs > 0) {
+            //     audioInputSelector.disabled = false
+            //     updateInputDevices(await getInputDevices())
+            //     await connectInput()
+            // } else {
+            //     audioInputSelector.disabled = true
+            //     audioInputSelector.innerHTML = "<option>Audio input</option>"
+            // }
+            // node.connect(audioCtx.destination)
+            // stopButton.disabled = false
+            // for (const tabButton of tabButtons) {
+            //     tabButton.disabled = false
+            // }
 
-            openSidebar()
-            // Clear old tab contents
-            for (const tab of tabContents) {
-                while (tab.lastChild) tab.lastChild.remove()
-            }
-            // Create scope & spectrum plots
-            analyser = new AnalyserNode(audioCtx, {
-                fftSize: Math.pow(2, 11), minDecibels: -96, maxDecibels: 0, smoothingTimeConstant: 0.85
-            })
-            node.connect(analyser)
-            scope = new Scope(tabContents[2])
-            spectrum = new Scope(tabContents[3])
+            // // Access MIDI device
+            // if (gmidi) {
+            //     accessMIDIDevice(midiInputCallback(node))
+            //         .then(() => {
+            //             console.log('Successfully connected to the MIDI device.');
+            //         })
+            //         .catch((error) => {
+            //             console.error('Error accessing MIDI device:', error.message);
+            //         });
+            // }
 
-            // If there are UI elements, open Faust UI (controls tab); otherwise open spectrum analyzer.
-            const ui = node.getUI()
-            openTab(ui.length > 1 || ui[0].items.length > 0 ? 0 : 3)
+            // openSidebar()
+            // // Clear old tab contents
+            // for (const tab of tabContents) {
+            //     while (tab.lastChild) tab.lastChild.remove()
+            // }
+            // // Create scope & spectrum plots
+            // analyser = new AnalyserNode(audioCtx, {
+            //     fftSize: Math.pow(2, 11), minDecibels: -96, maxDecibels: 0, smoothingTimeConstant: 0.85
+            // })
+            // node.connect(analyser)
+            // scope = new Scope(tabContents[2])
+            // spectrum = new Scope(tabContents[3])
 
-            // Create controls via Faust UI
-            this.node = node
-            const faustUI = new FaustUI({ ui, root: faustUIRoot })
-            faustUI.paramChangeByUI = (path, value) => {
-                node?.setParamValue(path, value)
-                console.log(node, path, value)
-            }
-            node.setOutputParamHandler((path, value) => faustUI.paramChangeByDSP(path, value))
+            // // If there are UI elements, open Faust UI (controls tab); otherwise open spectrum analyzer.
+            // const ui = node.getUI()
+            // openTab(ui.length > 1 || ui[0].items.length > 0 ? 0 : 3)
 
-            // Create SVG block diagram
-            setSVG(svgDiagrams.from("main", code, "")["process.svg"])
+            // // Create controls via Faust UI
+            // this.node = node
+            // const faustUI = new FaustUI({ ui, root: faustUIRoot })
+            // faustUI.paramChangeByUI = (path, value) => {
+            //     node?.setParamValue(path, value)
+            //     console.log(node, path, value)
+            // }
+            // node.setOutputParamHandler((path, value) => faustUI.paramChangeByDSP(path, value))
 
-            // Set editor size to fit UI size
-            editorEl.style.height = `${Math.max(125, faustUI.minHeight)}px`;
-            faustUIRoot.style.width = faustUI.minWidth * 1.25 + "px"
-            faustUIRoot.style.height = faustUI.minHeight * 1.25 + "px"
-        }
+            // // Create SVG block diagram
+            // setSVG(svgDiagrams.from("main", code, "")["process.svg"])
+
+            // // Set editor size to fit UI size
+            // editorEl.style.height = `${Math.max(125, faustUI.minHeight)}px`;
+            // faustUIRoot.style.width = faustUI.minWidth * 1.25 + "px"
+            // faustUIRoot.style.height = faustUI.minHeight * 1.25 + "px"
+      //  }
 
         const setSVG = (svgString: string) => {
             faustDiagram.innerHTML = svgString
@@ -398,8 +528,8 @@ export default class FaustEditor extends HTMLElement {
 
         let animPlot: number | undefined
         const drawScope = () => {
-            scope!.renderScope([{
-                analyser: analyser!,
+            this.scope!.renderScope([{
+                analyser: this.analyser!,
                 style: "rgb(212, 100, 100)",
                 edgeThreshold: 0.09,
             }])
@@ -407,7 +537,7 @@ export default class FaustEditor extends HTMLElement {
         }
 
         const drawSpectrum = () => {
-            spectrum!.renderSpectrum(analyser!)
+            this.spectrum!.renderSpectrum(this.analyser!)
             animPlot = requestAnimationFrame(drawSpectrum)
         }
 
@@ -422,11 +552,11 @@ export default class FaustEditor extends HTMLElement {
                 }
             }
             if (i === 2) {
-                scope!.onResize()
+                this.scope!.onResize()
                 if (animPlot !== undefined) cancelAnimationFrame(animPlot)
                 animPlot = requestAnimationFrame(drawScope)
             } else if (i === 3) {
-                spectrum!.onResize()
+                this.spectrum!.onResize()
                 if (animPlot !== undefined) cancelAnimationFrame(animPlot)
                 animPlot = requestAnimationFrame(drawSpectrum)
             } else if (animPlot !== undefined) {
@@ -440,10 +570,10 @@ export default class FaustEditor extends HTMLElement {
         }
 
         stopButton.onclick = () => {
-            if (node !== undefined) {
-                node.disconnect()
-                node.destroy()
-                node = undefined
+            if (this.node !== undefined) {
+                this.node.disconnect()
+                this.node.destroy()
+                this.node = undefined
                 stopButton.disabled = true
                 // TODO: Maybe disable controls in faust-ui tab.
             }
@@ -466,11 +596,11 @@ export default class FaustEditor extends HTMLElement {
         const connectInput = async () => {
             const deviceId = audioInputSelector.value
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId, echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
-            if (input) {
-                input.disconnect()
-                input = undefined
+            if (this.input) {
+                this.input.disconnect()
+                this.input = undefined
             }
-            if (node && node.numberOfInputs > 0) {
+            if (this.node && this.node.numberOfInputs > 0) {
                 if (deviceId == "Audio File") {
                     try {
                         // Extract the base URL (excluding the script filename)
@@ -482,26 +612,29 @@ export default class FaustEditor extends HTMLElement {
                         const arrayBuffer = await file.arrayBuffer();
                         let audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
                         // Create a source node from the buffer
-                        sourceNode = audioCtx.createBufferSource();
-                        sourceNode.buffer = audioBuffer;
-                        sourceNode.connect(node!);
+                        this.sourceNode = audioCtx.createBufferSource();
+                        this.sourceNode.buffer = audioBuffer;
+                        this.sourceNode.connect(this.node!);
                         // Start playing the file
-                        sourceNode.start();
+                        this.sourceNode.start();
                     } catch (error) {
                         console.error("Error loading file: ", error);
                     }
                 } else {
-                    if (sourceNode !== undefined) {
-                        sourceNode.stop();
-                        sourceNode.disconnect();
-                        sourceNode = undefined;
+                    if (this.sourceNode !== undefined) {
+                        this.sourceNode.stop();
+                        this.sourceNode.disconnect();
+                        this.sourceNode = undefined;
                     }
-                    input = audioCtx.createMediaStreamSource(stream);
-                    input.connect(node!);
+                    this.input = audioCtx.createMediaStreamSource(stream);
+                    this.input.connect(this.node!);
                 }
             }
         }
 
         audioInputSelector.onchange = connectInput
+
+        this.localElements = { setSVG, audioInputSelector, stopButton, updateInputDevices, connectInput, openTab, editor, runButton, faustUIRoot, faustDiagram, sidebar, sidebarContent, tabButtons, tabContents, split, openSidebar }
+
     }
 }

@@ -13,9 +13,15 @@ These components are built on top of [faustwasm](https://github.com/grame-cncm/f
 This fork is created by @ojack for experimental use. Some changes include:
 - exposing the faust audio node via the 'node' property of the faust editor. parameters of a running program can be set bye calling 
 ```javascript
-faustEditor.node?.setParamValue(path, value)
+editor.node?.setParamValue(path, value)
 ```
-where faustEditor is an instance of the 'faust-editor' custom element
+where editor is an instance of the 'faust-editor' custom element
+- adds event listener for when the code is compiled
+```javascript
+editor.addEventListener('faust-code-compiled', (e) => { console.log('COMPILED', e })
+```
+- adds a 'run()' function for programmatically running current code
+`editor.run()`
 
 ## Build Instructions
 
