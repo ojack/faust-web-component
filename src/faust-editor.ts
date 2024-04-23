@@ -335,8 +335,8 @@ export default class FaustEditor extends HTMLElement {
 
         // If there are UI elements, open Faust UI (controls tab); otherwise open spectrum analyzer.
         const ui = this.node.getUI()
-       // openTab(ui.length > 1 || ui[0].items.length > 0 ? 0 : 3)
-        openTab(3)
+       openTab(ui.length > 1 || ui[0].items.length > 0 ? 0 : 3)
+        // openTab(3)
         // Create controls via Faust UI
         // this.node = node
         const faustUI = new FaustUI({ ui, root: faustUIRoot })
@@ -356,7 +356,8 @@ export default class FaustEditor extends HTMLElement {
     }
 
     connectedCallback() {
-        const code = this.innerHTML.replace("<!--", "").replace("-->", "").trim()
+        const code = this.innerHTML.replace("&lt;", "<").replace("<!--", "").replace("-->", "").trim()
+        console.log('code is!', code)
         this.attachShadow({ mode: "open" }).appendChild(template.content.cloneNode(true))
 
         const ideLink = this.shadowRoot!.querySelector("#ide") as HTMLAnchorElement
