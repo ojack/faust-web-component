@@ -24,7 +24,7 @@ template.innerHTML = `
         </select>
         -->
         <!-- TODO: volume control? <input id="volume" type="range" min="0" max="100"> -->
-        <a title="Faust website" id="faust" href="https://faust.grame.fr/" target="_blank"><img src="${faustSvg}" height="15px" /></a>
+       <!-- <a title="Faust website" id="faust" href="https://faust.grame.fr/" target="_blank"><img src="${faustSvg}" height="15px" /></a> -->
     </div>
     <div id="content">
         <div id="editor"></div>
@@ -45,9 +45,15 @@ template.innerHTML = `
     </div>
 </div>
 <style>
+    :host {
+        --main-bg-color: black;
+        --main-color: white;
+    }
+
     #root {
-        border: 1px solid black;
-        border-radius: 5px;
+        border: 1px solid var(--main-color);
+       /* border-radius: 5px; */
+        border-radius: 0px;
         box-sizing: border-box;
     }
 
@@ -57,8 +63,8 @@ template.innerHTML = `
 
     #controls {
       /*  background-color: #384d64; */
-        background-color: #ccc;
-        border-bottom: 1px solid black;
+        background-color: var(--main-bg-color);
+        border-bottom: 1px solid var(--main-color);
         display: flex;
     }
 
@@ -117,12 +123,14 @@ template.innerHTML = `
     }
 
     #sidebar-buttons .tab.active {
-        background-color: #bbb;
+       /* background-color: #bbb; */
+       background-color: var(--main-color);
+       color:  var(--main-bg-color);
     }
 
     #sidebar-buttons {
         /* background-color: #f5f5f5;*/
-        background-color: #ccc;
+        background-color: var(--main-bg-color);
 
         display: flex;
         flex-direction: column;
@@ -130,8 +138,9 @@ template.innerHTML = `
 
     #sidebar-buttons .button {
        /* background-color: #f5f5f5;*/
-       background-color: #ccc;
-        color: #000;
+       background-color: var(--main-bg-color);
+      /*  color: #000; */
+      color: var(--main-color);
         width: 20px;
         height: 20px;
         padding: 4px;
@@ -146,8 +155,10 @@ template.innerHTML = `
     }
 
     #sidebar-content {
-        background-color: #fff;
-        border-left: 1px solid #ccc;
+      /*  background-color: #fff; */
+      background-color: var(--main-bg-color);
+     /*   border-left: 1px solid #ccc; */
+     border-left: 1px solid var(main-color);
         overflow: auto;
         flex-grow: 1;
         max-height: 100%;
@@ -167,7 +178,8 @@ template.innerHTML = `
 
     .button {
       /*  background-color: #384d64; */
-      background-color: #ccc;
+     /* background-color: #ccc; */
+     background-color: var(--main-bg-color);
         border: 0;
         padding: 5px;
         width: 25px;
@@ -181,7 +193,11 @@ template.innerHTML = `
     }
 
     .button:active {
-        background-color: #373736;
+      /*  background-color: #373736; */
+        background-color: var(--main-color);
+        color: var(--main-bg-color);
+
+
     }
 
     .button:disabled {
@@ -200,11 +216,14 @@ template.innerHTML = `
         height: 19px;
         margin: 3px 0 3px 10px;
         border: 0;
-        background: #fff;
+        background: var(--main-bg-color);
+        color: var(--main-color);
     }
 
     .gutter {
-        background-color: #f5f5f5;
+       /* background-color: #f5f5f5; */
+       background-color: var(--main-bg-color);
+        border: solid 1px var(--main-color);
         background-repeat: no-repeat;
         background-position: 50%;
     }

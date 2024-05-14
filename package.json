@@ -45,6 +45,7 @@
         "@grame/faustwasm": "^0.0.66",
         "@shren/faust-ui": "^1.1.8",
         "codemirror": "^6.0.1",
-        "split.js": "^1.6.5"
+        "split.js": "^1.6.5",
+        "thememirror": "^2.0.1"
     }
 }

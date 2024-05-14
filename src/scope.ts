@@ -4,8 +4,10 @@ export class Scope {
     container: HTMLElement
     canvas: HTMLCanvasElement
     ctx: CanvasRenderingContext2D
+    userStyle: { backgroundColor:string, textColor: string, graphColor: string } 
     
     constructor(container: HTMLElement) {
+        this.userStyle = { backgroundColor: 'black', textColor: 'white', graphColor:  "rgba(200, 200, 200, 0.5)"}
         this.container = container
         this.container.classList.add("scope")
         
@@ -33,11 +35,14 @@ export class Scope {
     
     renderScope(toRender: { analyser: AnalyserNode, style: string, edgeThreshold: number }[] = []) {
         // grid
-        this.ctx.fillStyle = "white"
+         this.ctx.fillStyle = this.userStyle.backgroundColor
+        // this.ctx.fillStyle = 'yellow'
         this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
         this.ctx.lineWidth = 1
-        this.ctx.strokeStyle = "rgba(200, 200, 200, 0.5)"
-        this.ctx.fillStyle = "rgba(200, 200, 200, 0.5)"
+        this.ctx.strokeStyle =this.userStyle.graphColor
+        this.ctx.fillStyle = this.userStyle.graphColor
+    //    this.ctx.strokeStyle =this.userStyle.textColor
+    //     this.ctx.fillStyle = this.userStyle.textColor
         this.ctx.beginPath()
         
         const numHorzSteps = 8
@@ -75,6 +80,7 @@ export class Scope {
             this.ctx.lineWidth = 2
             this.ctx.strokeStyle = style
             
+            this.ctx.strokeStyle = this.userStyle.textColor
             this.ctx.beginPath()
             
             while (timeData[risingEdge] > 0 &&
@@ -103,7 +109,8 @@ export class Scope {
         })
         
         // markers
-        this.ctx.fillStyle = "black"
+        // this.ctx.fillStyle = "black"
+        this.ctx.fillStyle = this.userStyle.graphColor
         this.ctx.font = "11px Courier"
         this.ctx.textAlign = "left"
         const numMarkers = 4
@@ -127,11 +134,12 @@ export class Scope {
         
         analyser.getByteFrequencyData(freqData)
         
-        this.ctx.fillStyle = "white"
+        this.ctx.fillStyle = this.userStyle.backgroundColor
         this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight)
         
         this.ctx.lineWidth = 2
-        this.ctx.strokeStyle = "rgb(43, 156, 212)"
+        // this.ctx.strokeStyle = "rgb(43, 156, 212)"
+        this.ctx.strokeStyle = this.userStyle.textColor
         this.ctx.beginPath()
         
         for (let i = 0; i < freqData.length; i++) {
@@ -157,7 +165,8 @@ export class Scope {
             ? fontSize - 5
             : explin(freq, minFreq, nyquist, 0, this.canvasWidth)
             
-            this.ctx.fillStyle = "black"
+            // this.ctx.fillStyle = "black"
+            this.ctx.fillStyle = this.userStyle.graphColor
             this.ctx.textBaseline = "middle"
             this.ctx.textAlign = "right"
             this.ctx.font = `${fontSize}px Courier`
@@ -172,8 +181,9 @@ export class Scope {
             const x = 5
             const amp = Math.pow(10, db * 0.05)
             const y = (1 - amp) * this.canvasHeight
-            
-            this.ctx.fillStyle = "black"
+            // 
+            // this.ctx.fillStyle = "black"
+            this.ctx.fillStyle = this.userStyle.graphColor
             this.ctx.textBaseline = "top"
             this.ctx.textAlign = "left"
             this.ctx.font = `${fontSize}px Courier`

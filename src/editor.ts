@@ -10,6 +10,8 @@ import {EditorState} from "@codemirror/state"
 import {StreamLanguage} from "@codemirror/language"
 import {clike} from "@codemirror/legacy-modes/mode/clike"
 import {lintKeymap, setDiagnostics, openLintPanel, closeLintPanel} from "@codemirror/lint"
+import {boysAndGirls} from 'thememirror';
+
 
 const keywords = "process component import library declare with environment route waveform soundfile"
 const atoms = "mem prefix int float rdtable rwtable select2 select3 ffunction fconstant fvariable button checkbox vslider hslider nentry vgroup hgroup tgroup vbargraph hbargraph attach acos asin atan atan2 cos sin tan exp log log10 pow sqrt abs min max fmod remainder floor ceil rint"
@@ -63,6 +65,7 @@ export function createEditor(parent: HTMLElement, doc: string) {
                 ...lintKeymap
             ]),
             faustLanguage,
+            boysAndGirls
         ],
     })
 }
