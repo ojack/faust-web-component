@@ -7,7 +7,8 @@ export class Scope {
     userStyle: { backgroundColor:string, textColor: string, graphColor: string } 
     
     constructor(container: HTMLElement) {
-        this.userStyle = { backgroundColor: 'black', textColor: 'white', graphColor:  "rgba(200, 200, 200, 0.5)"}
+        console.log('CONTAINER STYLE', getComputedStyle(container).getPropertyValue('--main-bg-color'))
+        this.userStyle = { backgroundColor:getComputedStyle(container).getPropertyValue('--main-bg-color'), textColor: getComputedStyle(container).getPropertyValue('--main-color'), graphColor:  getComputedStyle(container).getPropertyValue('--main-graph-color')}
         this.container = container
         this.container.classList.add("scope")
         

@@ -22,6 +22,13 @@ editor.addEventListener('faust-code-compiled', (e) => { console.log('COMPILED', 
 ```
 - adds a 'run()' function for programmatically running current code
 `editor.run()`
+- allows styling of components using CSS variables
+The available variables are: -main-bg-color, --main-color, and --main-graph-color
+
+These can be set externally via setting CSS properties on the custom element:
+```js
+  <faust-editor style="--main-bg-color: pink, --main-color': green"></faust-editor>
+```
 
 ## Build Instructions
 

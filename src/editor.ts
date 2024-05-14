@@ -35,6 +35,26 @@ const faustLanguage = StreamLanguage.define(clike({
 }))
 
 export function createEditor(parent: HTMLElement, doc: string) {
+    let myTheme = EditorView.theme({
+    "&": {
+        color: "var(--main-color)",
+        backgroundColor:  "var(--main-bg-color)"
+    },
+    // ".cm-content": {
+    //     caretColor: "#0e9"
+    // },
+    // "&.cm-focused .cm-cursor": {
+    //     borderLeftColor: "#0e9"
+    // },
+    // "&.cm-focused .cm-selectionBackground, ::selection": {
+    //     backgroundColor: "#074"
+    // },
+    ".cm-gutters": {
+        backgroundColor: "var(--main-bg-color)",
+        color:  "var(--main-color)",
+        border: "none"
+    }
+    })
     return new EditorView({
         parent,
         doc,
@@ -65,7 +85,9 @@ export function createEditor(parent: HTMLElement, doc: string) {
                 ...lintKeymap
             ]),
             faustLanguage,
-            boysAndGirls
+            // boysAndGirls,
+            myTheme,
+            boysAndGirls,
         ],
     })
 }

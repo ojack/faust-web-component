@@ -8,6 +8,13 @@ import { createEditor, setError, clearError } from "./editor"
 import { Scope } from "./scope"
 import faustSvg from "./faustText.svg"
 
+// default colors, can be overridden by specificying CSS variables on element
+const COLORS = {
+    backgroundColor: 'orange',
+    color: 'white',
+    graphColor: '#333'
+}
+
 const template = document.createElement("template")
 template.innerHTML = `
 <div id="root">
@@ -46,8 +53,9 @@ template.innerHTML = `
 </div>
 <style>
     :host {
-        --main-bg-color: black;
-        --main-color: white;
+        --main-bg-color: ${COLORS.backgroundColor};
+        --main-color: ${COLORS.color};
+        --main-graph-color: ${COLORS.graphColor};
     }
 
     #root {
@@ -79,6 +87,10 @@ template.innerHTML = `
         width: 232px;
         max-height: 150px;
     }
+
+    /*.faust-ui-group {
+        background-color: var(--main-bg-color);
+    }*/
 
     #faust-scope, #faust-spectrum {
         min-width: 232px;
@@ -180,11 +192,11 @@ template.innerHTML = `
       /*  background-color: #384d64; */
      /* background-color: #ccc; */
      background-color: var(--main-bg-color);
+     color: var(--main-color);
         border: 0;
         padding: 5px;
         width: 25px;
         height: 25px;
-        color: #fff;
     }
 
     .button:hover {
@@ -378,6 +390,7 @@ export default class FaustEditor extends HTMLElement {
         const code = this.innerHTML.replace("&lt;", "<").replace("<!--", "").replace("-->", "").trim()
         console.log('code is!', code)
         this.attachShadow({ mode: "open" }).appendChild(template.content.cloneNode(true))
+        console.log('editor style;', getComputedStyle(this), getComputedStyle(this).getPropertyValue('--main-bg-color'))
 
         const ideLink = this.shadowRoot!.querySelector("#ide") as HTMLAnchorElement
         ideLink.onfocus = () => {
